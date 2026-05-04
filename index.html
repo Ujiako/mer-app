@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Mi Gym Log</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
 
@@ -413,6 +414,29 @@
 
   .toast.show { transform: translateX(-50%) translateY(0); }
 
+  .export-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    background: transparent;
+    border: 0.5px solid var(--border2);
+    border-radius: 6px;
+    color: var(--muted);
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .export-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .export-icon { font-size: 13px; }
+
   .stats-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -442,6 +466,199 @@
     margin-top: 3px;
     font-family: 'DM Mono', monospace;
   }
+
+  /* ── Historial overlay ── */
+  .hist-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 200;
+    overflow-y: auto;
+    padding-bottom: 40px;
+  }
+  .hist-overlay.open { display: block; }
+
+  .hist-header {
+    padding: 20px 16px 14px;
+    border-bottom: 0.5px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .hist-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .hist-close {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    background: transparent;
+    border: 0.5px solid var(--border2);
+    border-radius: 6px;
+    color: var(--muted);
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+
+  .hist-body { padding: 0 16px; }
+
+  .hist-week-block {
+    margin-top: 20px;
+  }
+
+  .hist-week-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hist-week-label::after {
+    content: '';
+    flex: 1;
+    height: 0.5px;
+    background: rgba(200,245,66,0.2);
+  }
+
+  .hist-day-block {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+
+  .hist-day-header {
+    padding: 11px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    background: var(--surface2);
+  }
+
+  .hist-day-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .hist-day-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .hist-chev {
+    font-size: 13px;
+    color: var(--dim);
+    transition: transform 0.2s;
+  }
+  .hist-chev.open { transform: rotate(180deg); }
+
+  .hist-day-body {
+    display: none;
+    padding: 10px 14px 14px;
+  }
+  .hist-day-body.open { display: block; }
+
+  .hist-ex-row {
+    padding: 7px 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .hist-ex-row:last-child { border-bottom: none; }
+
+  .hist-ex-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .hist-sets-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .hist-set-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: 4px;
+    padding: 3px 7px;
+    color: var(--muted);
+  }
+
+  .hist-set-pill.has-data {
+    border-color: rgba(200,245,66,0.3);
+    color: var(--accent);
+  }
+
+  .hist-note {
+    font-size: 11px;
+    color: var(--blue);
+    background: rgba(126,184,247,0.06);
+    border-left: 2px solid rgba(126,184,247,0.3);
+    border-radius: 0 4px 4px 0;
+    padding: 6px 8px;
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .hist-empty {
+    text-align: center;
+    padding: 60px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--dim);
+    line-height: 2;
+  }
+
+  .hist-summary-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+
+  .hist-summary-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: rgba(200,245,66,0.07);
+    border: 0.5px solid rgba(200,245,66,0.2);
+    color: var(--accent2);
+  }
+
+  .hist-pr-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    background: rgba(240,80,80,0.15);
+    color: #f08080;
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin-left: 4px;
+    letter-spacing: 0.06em;
+  }
 </style>
 </head>
 <body>
@@ -451,7 +668,11 @@
     <div>
       <div class="app-title">Gym Log</div>
     </div>
-    <div class="week-display" id="week-display">Sem 1</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="export-btn" onclick="openHistory()"><span class="export-icon">📋</span> Historial</button>
+      <button class="export-btn" onclick="exportToExcel()"><span class="export-icon">⬇</span> Excel</button>
+      <div class="week-display" id="week-display">Sem 1</div>
+    </div>
   </div>
   <div class="day-selector" id="day-selector"></div>
   <div class="progress-bar-wrap">
@@ -460,6 +681,14 @@
 </header>
 
 <div class="content" id="content"></div>
+
+<div class="hist-overlay" id="hist-overlay">
+  <div class="hist-header">
+    <div class="hist-title">Historial</div>
+    <button class="hist-close" onclick="closeHistory()">✕ Cerrar</button>
+  </div>
+  <div class="hist-body" id="hist-body"></div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -858,6 +1087,258 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function openHistory() {
+  renderHistory();
+  document.getElementById('hist-overlay').classList.add('open');
+}
+
+function closeHistory() {
+  document.getElementById('hist-overlay').classList.remove('open');
+}
+
+function toggleHistDay(id) {
+  const body = document.getElementById('hbody-' + id);
+  const chev = document.getElementById('hchev-' + id);
+  if (!body) return;
+  const open = body.classList.contains('open');
+  body.classList.toggle('open', !open);
+  chev.classList.toggle('open', !open);
+}
+
+function renderHistory() {
+  const container = document.getElementById('hist-body');
+  const maxWeek = weekNum;
+
+  // Collect PR (max kg) per exercise across all history
+  const globalMaxKg = {};
+  for (let w = 1; w <= maxWeek; w++) {
+    DAYS.forEach((day, di) => {
+      day.sections.forEach((sec, si) => {
+        sec.exercises.forEach((ex, ei) => {
+          for (let s = 0; s < ex.sets; s++) {
+            const kKey = `${w}-${di}-${si}-${ei}-${s}-kg`;
+            const kg = parseFloat(savedSets[kKey]);
+            if (!isNaN(kg)) {
+              if (globalMaxKg[ex.name] === undefined || kg > globalMaxKg[ex.name]) {
+                globalMaxKg[ex.name] = kg;
+              }
+            }
+          }
+        });
+      });
+    });
+  }
+
+  let hasAnyData = false;
+  let html = '';
+
+  for (let w = maxWeek; w >= 1; w--) {
+    let weekHtml = '';
+    let weekHasData = false;
+
+    DAYS.forEach((day, di) => {
+      const noteKey = `session-note-${w}-${di}`;
+      const note = notes[noteKey] || '';
+      const blockId = `w${w}d${di}`;
+
+      // Collect sets data for this day
+      let exRows = '';
+      let totalSets = 0;
+      let totalKgVol = 0;
+      let dayHasData = false;
+
+      day.sections.forEach((sec, si) => {
+        sec.exercises.forEach((ex, ei) => {
+          let pills = '';
+          let exHasData = false;
+
+          for (let s = 0; s < ex.sets; s++) {
+            const kKey = `${w}-${di}-${si}-${ei}-${s}-kg`;
+            const rKey = `${w}-${di}-${si}-${ei}-${s}-rep`;
+            const kg = savedSets[kKey];
+            const rep = savedSets[rKey];
+            const hasKg = kg !== undefined && kg !== '';
+            const hasRep = rep !== undefined && rep !== '';
+
+            if (hasKg || hasRep) {
+              exHasData = true;
+              dayHasData = true;
+              totalSets++;
+              const kgNum = parseFloat(kg);
+              const repNum = parseInt(rep);
+              if (!isNaN(kgNum) && !isNaN(repNum)) totalKgVol += kgNum * repNum;
+
+              const kgLabel = hasKg ? `${kg}kg` : '—';
+              const repLabel = hasRep ? `${rep}r` : '—';
+              const isPR = hasKg && parseFloat(kg) === globalMaxKg[ex.name] && globalMaxKg[ex.name] > 0;
+              pills += `<span class="hist-set-pill has-data">S${s+1}: ${kgLabel} × ${repLabel}${isPR ? '<span class="hist-pr-badge">PR</span>' : ''}</span>`;
+            } else {
+              pills += `<span class="hist-set-pill">S${s+1}: —</span>`;
+            }
+          }
+
+          if (exHasData) {
+            exRows += `<div class="hist-ex-row">
+              <div class="hist-ex-name">${ex.name}</div>
+              <div class="hist-sets-row">${pills}</div>
+            </div>`;
+          }
+        });
+      });
+
+      if (!dayHasData && !note) return;
+      weekHasData = true;
+      hasAnyData = true;
+
+      const volStr = totalKgVol > 0 ? `${Math.round(totalKgVol).toLocaleString('es-ES')} kg vol` : '';
+      const setsStr = totalSets > 0 ? `${totalSets} series` : '';
+      const summaryPills = [setsStr, volStr].filter(Boolean).map(s => `<span class="hist-summary-pill">${s}</span>`).join('');
+
+      weekHtml += `<div class="hist-day-block">
+        <div class="hist-day-header" onclick="toggleHistDay('${blockId}')">
+          <div>
+            <div class="hist-day-name">${day.name}</div>
+            <div class="hist-day-meta">${day.focus}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            ${setsStr ? `<span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${totalSets} series</span>` : ''}
+            <span class="hist-chev" id="hchev-${blockId}">▾</span>
+          </div>
+        </div>
+        <div class="hist-day-body" id="hbody-${blockId}">
+          ${summaryPills ? `<div class="hist-summary-row">${summaryPills}</div>` : ''}
+          ${exRows}
+          ${note ? `<div class="hist-note">💬 ${note}</div>` : ''}
+        </div>
+      </div>`;
+    });
+
+    if (weekHasData) {
+      html += `<div class="hist-week-block">
+        <div class="hist-week-label">Semana ${w}</div>
+        ${weekHtml}
+      </div>`;
+    }
+  }
+
+  if (!hasAnyData) {
+    html = `<div class="hist-empty">Aún no hay datos registrados.<br>Completa tu primera sesión<br>para verla aquí.</div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function exportToExcel() {
+  const wb = XLSX.utils.book_new();
+
+  // ── HOJA 1: Registro de series (todos los datos guardados) ──
+  const setsRows = [
+    ['Semana', 'Día', 'Sección', 'Ejercicio', 'Serie', 'Kg', 'Reps']
+  ];
+
+  // Recorremos todas las semanas que puedan tener datos guardados
+  const maxWeek = weekNum;
+  for (let w = 1; w <= maxWeek; w++) {
+    DAYS.forEach((day, di) => {
+      day.sections.forEach((sec, si) => {
+        sec.exercises.forEach((ex, ei) => {
+          for (let s = 0; s < ex.sets; s++) {
+            const kKey = `${w}-${di}-${si}-${ei}-${s}-kg`;
+            const rKey = `${w}-${di}-${si}-${ei}-${s}-rep`;
+            const kg = savedSets[kKey] || '';
+            const rep = savedSets[rKey] || '';
+            if (kg !== '' || rep !== '') {
+              setsRows.push([
+                `Sem ${w}`,
+                day.name,
+                sec.label,
+                ex.name,
+                `S${s + 1}`,
+                kg !== '' ? parseFloat(kg) : '',
+                rep !== '' ? parseInt(rep) : ''
+              ]);
+            }
+          }
+        });
+      });
+    });
+  }
+
+  const wsSets = XLSX.utils.aoa_to_sheet(setsRows);
+  wsSets['!cols'] = [
+    { wch: 8 }, { wch: 20 }, { wch: 18 }, { wch: 32 }, { wch: 7 }, { wch: 7 }, { wch: 7 }
+  ];
+  XLSX.utils.book_append_sheet(wb, wsSets, 'Registro Series');
+
+  // ── HOJA 2: Notas de sesión ──
+  const notesRows = [
+    ['Semana', 'Día', 'Notas']
+  ];
+  for (let w = 1; w <= maxWeek; w++) {
+    DAYS.forEach((day, di) => {
+      const key = `session-note-${w}-${di}`;
+      const note = notes[key] || '';
+      if (note.trim() !== '') {
+        notesRows.push([`Sem ${w}`, day.name, note]);
+      }
+    });
+  }
+  const wsNotes = XLSX.utils.aoa_to_sheet(notesRows);
+  wsNotes['!cols'] = [{ wch: 8 }, { wch: 20 }, { wch: 60 }];
+  XLSX.utils.book_append_sheet(wb, wsNotes, 'Notas');
+
+  // ── HOJA 3: Resumen por ejercicio y semana (progresión de peso) ──
+  // Pivot: para cada ejercicio, máximo kg por semana
+  const progressMap = {}; // { 'Ejercicio' -> { semana -> maxKg } }
+  const allWeeksSet = new Set();
+
+  for (let w = 1; w <= maxWeek; w++) {
+    DAYS.forEach((day, di) => {
+      day.sections.forEach((sec, si) => {
+        sec.exercises.forEach((ex, ei) => {
+          for (let s = 0; s < ex.sets; s++) {
+            const kKey = `${w}-${di}-${si}-${ei}-${s}-kg`;
+            const kg = savedSets[kKey];
+            if (kg !== undefined && kg !== '') {
+              const kgNum = parseFloat(kg);
+              if (!isNaN(kgNum)) {
+                const label = ex.name;
+                if (!progressMap[label]) progressMap[label] = {};
+                const prev = progressMap[label][w];
+                progressMap[label][w] = prev === undefined ? kgNum : Math.max(prev, kgNum);
+                allWeeksSet.add(w);
+              }
+            }
+          }
+        });
+      });
+    });
+  }
+
+  const sortedWeeks = Array.from(allWeeksSet).sort((a, b) => a - b);
+  const progressHeader = ['Ejercicio', ...sortedWeeks.map(w => `Sem ${w}`)];
+  const progressRows = [progressHeader];
+  Object.entries(progressMap).forEach(([exName, weekData]) => {
+    const row = [exName, ...sortedWeeks.map(w => weekData[w] !== undefined ? weekData[w] : '')];
+    progressRows.push(row);
+  });
+
+  const wsProgress = XLSX.utils.aoa_to_sheet(progressRows);
+  wsProgress['!cols'] = [
+    { wch: 32 },
+    ...sortedWeeks.map(() => ({ wch: 9 }))
+  ];
+  XLSX.utils.book_append_sheet(wb, wsProgress, 'Progresión Peso');
+
+  // ── Nombre del archivo con fecha actual ──
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const fileName = `GymLog_Sem${weekNum}_${dateStr}.xlsx`;
+
+  XLSX.writeFile(wb, fileName);
+  showToast('Excel exportado');
 }
 
 buildDaySelector();
