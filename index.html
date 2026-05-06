@@ -853,7 +853,7 @@ const DAYS = [
 ];
 
 let currentDay = 0;
-let completedExercises = {};
+let completedExercises = JSON.parse(localStorage.getItem('gymCompleted') || '{}');
 let sessionTimers = {};
 let weekNum = parseInt(localStorage.getItem('gymWeek') || '1');
 let weeklyDone = JSON.parse(localStorage.getItem('gymWeeklyDone') || '[]');
@@ -989,6 +989,7 @@ function toggleExpand(si, ei) {
 function toggleExDone(si, ei) {
   const exKey = getExKey(currentDay, si, ei);
   completedExercises[exKey] = !completedExercises[exKey];
+  localStorage.setItem('gymCompleted', JSON.stringify(completedExercises));
   renderDay();
 }
 
